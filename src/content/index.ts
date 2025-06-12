@@ -3,7 +3,13 @@ import type { StoreConfig, StoreConfigs } from '../types';
 // Configuration for different store platforms
 const STORE_CONFIGS: StoreConfigs = {
   'store.steampowered.com': {
-    titleSelector: '.apphub_AppName',
+    titleSelector: [
+      '.apphub_AppName', // Standard store page
+      '.page_title_area .title', // Some store pages
+      '.game_title_area .title', // Game hub pages
+      '.apphub_AppName_font', // Alternative store page layout
+      '.pageheader', // Some special pages
+    ],
     priceSelector: '.game_purchase_price',
     buyButtonSelector: '.btn_add_to_cart',
   },
@@ -32,11 +38,20 @@ function initialize(): void {
       checkGameOwnership(config);
     }, 2000); // Give extra time for dynamic content to load
   });
+
+  // Listen for messages from popup/background asking for current game
+  chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+    if (message.action === 'getCurrentGame') {
+      const gameTitle = extractGameTitle(config);
+      sendResponse({ gameTitle });
+      return true; // Keep the message channel open for async response
+    }
+  });
 }
 
 // Check if the current game is owned on any platform
 async function checkGameOwnership(config: StoreConfig): Promise<void> {
-  const gameTitle = document.querySelector(config.titleSelector)?.textContent?.trim();
+  const gameTitle = extractGameTitle(config);
   if (!gameTitle) return;
 
   // Send message to background script to check ownership
@@ -45,6 +60,23 @@ async function checkGameOwnership(config: StoreConfig): Promise<void> {
       showWarning(config);
     }
   });
+}
+
+// Helper function to extract game title using multiple selectors
+function extractGameTitle(config: StoreConfig): string | null {
+  if (Array.isArray(config.titleSelector)) {
+    // Try each selector until we find a match
+    for (const selector of config.titleSelector) {
+      const element = document.querySelector(selector);
+      if (element?.textContent) {
+        return element.textContent.trim();
+      }
+    }
+    return null;
+  }
+
+  // Fallback to single selector
+  return document.querySelector(config.titleSelector)?.textContent?.trim() || null;
 }
 
 // Show warning message on the page

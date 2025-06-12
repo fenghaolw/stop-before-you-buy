@@ -1,6 +1,6 @@
 // import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import type { Library, Settings } from '../types';
+import type { Library, Settings, Message } from '../types';
 import { getLibraryCount } from '../utils';
 
 interface PopupProps {
@@ -24,12 +24,41 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
     }
   );
 
+  const [currentGame, setCurrentGame] = useState<string | null>(null);
+
   useEffect(() => {
     // Load saved data
     chrome.storage.sync.get(['libraries', 'settings'], data => {
       if (data.libraries) setLibraries(data.libraries);
       if (data.settings) setSettings(data.settings);
     });
+
+    // Get current game title from active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'getCurrentGame' }, (response) => {
+          if (chrome.runtime.lastError) {
+            // Content script not available on this page, that's okay
+            console.log('Content script not available on this page');
+          } else if (response?.gameTitle) {
+            console.log('Got current game from content script:', response.gameTitle);
+            setCurrentGame(response.gameTitle);
+          }
+        });
+      }
+    });
+
+    // Listen for current game updates
+    const messageListener = (message: Message) => {
+      console.log('Popup received message:', message);
+      if (message.action === 'updateCurrentGame' && message.gameTitle) {
+        console.log('Setting current game to:', message.gameTitle);
+        setCurrentGame(message.gameTitle);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(messageListener);
+    return () => chrome.runtime.onMessage.removeListener(messageListener);
   }, []);
 
   const handlePlatformConnect = (platform: 'steam' | 'epic' | 'gog'): void => {
@@ -66,6 +95,17 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
   return (
     <div className="container">
       <h1>Stop Before You Buy</h1>
+
+      {/* {currentGame && ( */}
+      <div className="current-game-section">
+        <h2>Current Game</h2>
+        <div className="current-game">
+          <span className="game-title">
+            {currentGame || 'No game detected on this page'}
+          </span>
+        </div>
+      </div>
+      {/* )} */}
 
       <div className="platform-section">
         <h2>Connect Your Libraries</h2>

@@ -5,6 +5,7 @@ $background-color: #f5f5f5;
 $text-color: #333;
 $border-radius: 8px;
 $spacing: 16px;
+$popup-width: 480px;
 
 // Mixins
 @mixin flex-center {
@@ -32,108 +33,158 @@ $spacing: 16px;
 }
 
 body {
-  width: 400px;
+  width: $popup-width;
   margin: 0;
   padding: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background-color: var(--background-color);
   color: var(--text-color);
+  min-height: 400px;
 }
 
 .container {
-  padding: var(--spacing);
+  padding: calc(var(--spacing) * 1.5);
+  max-width: $popup-width;
+  margin: 0 auto;
 }
 
 // Typography
 h1 {
-  font-size: 24px;
-  margin: 0 0 var(--spacing) 0;
+  font-size: 28px;
+  margin: 0 0 calc(var(--spacing) * 1.5) 0;
   color: var(--primary-color);
   text-align: center;
+  font-weight: 600;
 }
 
 h2 {
-  font-size: 18px;
-  margin: var(--spacing) 0;
+  font-size: 20px;
+  margin: calc(var(--spacing) * 1.2) 0 var(--spacing) 0;
   color: var(--secondary-color);
+  font-weight: 500;
 }
 
 // Components
 .platform-section,
 .library-section,
-.settings-section {
+.settings-section,
+.current-game-section {
   @include card;
+  margin-bottom: calc(var(--spacing) * 1.5);
 }
 
 .platform-buttons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing);
+  gap: calc(var(--spacing) * 1.2);
 }
 
 .platform-btn {
   @include flex-center;
   flex-direction: column;
-  padding: var(--spacing);
+  padding: calc(var(--spacing) * 1.2);
   border: none;
   border-radius: var(--border-radius);
   background: white;
   cursor: pointer;
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+  transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background-color: var(--background-color);
   }
 
   img {
-    width: 32px;
-    height: 32px;
-    margin-bottom: 8px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
   }
 }
 
 .library-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing);
+  gap: calc(var(--spacing) * 1.2);
 }
 
 .stat-box {
   background: var(--background-color);
-  padding: var(--spacing);
+  padding: calc(var(--spacing) * 1.2);
   border-radius: var(--border-radius);
   text-align: center;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .stat-label {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
   color: var(--primary-color);
 }
 
 .setting-item {
-  margin: var(--spacing) 0;
+  margin: calc(var(--spacing) * 1.2) 0;
+  padding: 8px 0;
 
   label {
     @include flex-center;
     cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-color);
   }
 
   input[type='checkbox'] {
-    margin-right: 8px;
-    width: 18px;
-    height: 18px;
+    margin-right: 12px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+}
+
+.current-game-section {
+  background-color: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .current-game {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background-color: var(--background-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+
+    .game-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
   }
 }

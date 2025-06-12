@@ -29,5 +29,10 @@ export default defineConfig({
       },
     },
   },
+  css: {
+    modules: {
+      localsConvention: 'camelCase',
+    },
+  },
   publicDir: 'public',
 });

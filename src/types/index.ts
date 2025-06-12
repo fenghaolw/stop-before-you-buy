@@ -18,7 +18,7 @@ export interface Settings {
 }
 
 export interface StoreConfig {
-  titleSelector: string;
+  titleSelector: string | string[];
   priceSelector: string;
   buyButtonSelector: string;
 }
@@ -28,7 +28,7 @@ export interface StoreConfigs {
 }
 
 export interface Message {
-  action: 'fetchLibrary' | 'checkGameOwnership';
+  action: 'fetchLibrary' | 'checkGameOwnership' | 'updateCurrentGame' | 'getCurrentGame';
   platform?: Platform;
   gameTitle?: string;
 }
