@@ -1,3 +1,5 @@
+/// <reference types="chrome"/>
+
 import type { StoreConfig, StoreConfigs } from '../types';
 
 // Configuration for different store platforms
@@ -25,6 +27,44 @@ const STORE_CONFIGS: StoreConfigs = {
   },
 };
 
+// Show the extension banner on the page
+function showExtensionBanner(config: StoreConfig): void {
+  const bannerDiv = document.createElement('div');
+  bannerDiv.className = 'stop-before-you-buy-banner';
+  bannerDiv.innerHTML = `
+    <div style="
+      background-color: #2196f3;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    ">
+      <span style="font-weight: 500;">🛡️ Stop-before-you-buy is active</span>
+    </div>
+  `;
+
+  // Find the game title element to insert the banner after
+  if (Array.isArray(config.titleSelector)) {
+    for (const selector of config.titleSelector) {
+      const titleElement = document.querySelector(selector);
+      if (titleElement) {
+        titleElement.parentNode?.insertBefore(bannerDiv, titleElement.nextSibling);
+        return;
+      }
+    }
+  } else {
+    const titleElement = document.querySelector(config.titleSelector);
+    if (titleElement) {
+      titleElement.parentNode?.insertBefore(bannerDiv, titleElement.nextSibling);
+    }
+  }
+}
+
 // Initialize the content script
 function initialize(): void {
   const hostname = window.location.hostname;
@@ -35,12 +75,17 @@ function initialize(): void {
   // Wait for the page to load completely
   window.addEventListener('load', () => {
     setTimeout(() => {
+      showExtensionBanner(config);
       checkGameOwnership(config);
     }, 2000); // Give extra time for dynamic content to load
   });
 
   // Listen for messages from popup/background asking for current game
-  chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+  chrome.runtime.onMessage.addListener((
+    message: { action: string },
+    _: chrome.runtime.MessageSender,
+    sendResponse: (response: { gameTitle: string | null }) => void
+  ) => {
     if (message.action === 'getCurrentGame') {
       const gameTitle = extractGameTitle(config);
       sendResponse({ gameTitle });
@@ -55,11 +100,27 @@ async function checkGameOwnership(config: StoreConfig): Promise<void> {
   if (!gameTitle) return;
 
   // Send message to background script to check ownership
-  chrome.runtime.sendMessage({ action: 'checkGameOwnership', gameTitle }, response => {
-    if (response.success && response.owned) {
-      showWarning(config);
+  chrome.runtime.sendMessage(
+    { action: 'checkGameOwnership', gameTitle },
+    (response: { success: boolean; owned: boolean }) => {
+      if (response.success && response.owned) {
+        // Add click event to the buy button
+        const buyButton = document.querySelector(config.buyButtonSelector);
+        if (buyButton) {
+          buyButton.addEventListener('click', e => {
+            if (
+              !confirm(
+                'Are you sure you want to purchase this game? You already own it on another platform.'
+              )
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          });
+        }
+      }
     }
-  });
+  );
 }
 
 // Helper function to extract game title using multiple selectors
@@ -77,49 +138,6 @@ function extractGameTitle(config: StoreConfig): string | null {
 
   // Fallback to single selector
   return document.querySelector(config.titleSelector)?.textContent?.trim() || null;
-}
-
-// Show warning message on the page
-function showWarning(config: StoreConfig): void {
-  const warningDiv = document.createElement('div');
-  warningDiv.className = 'stop-before-you-buy-warning';
-  warningDiv.innerHTML = `
-    <div style="
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #ff4444;
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      z-index: 9999;
-      max-width: 300px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    ">
-      <h3 style="margin: 0 0 10px 0; font-size: 16px;">⚠️ Warning: Game Already Owned</h3>
-      <p style="margin: 0; font-size: 14px;">
-        You already own this game on another platform. Consider checking your library before purchasing.
-      </p>
-    </div>
-  `;
-
-  document.body.appendChild(warningDiv);
-
-  // Add click event to the buy button
-  const buyButton = document.querySelector(config.buyButtonSelector);
-  if (buyButton) {
-    buyButton.addEventListener('click', e => {
-      if (
-        !confirm(
-          'Are you sure you want to purchase this game? You already own it on another platform.'
-        )
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-  }
 }
 
 // Start the content script
