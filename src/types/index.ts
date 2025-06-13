@@ -28,7 +28,14 @@ export interface StoreConfigs {
 }
 
 export interface Message {
-  action: 'fetchLibrary' | 'checkGameOwnership' | 'updateCurrentGame' | 'getCurrentGame' | 'authenticateWithSteam' | 'setSteamApiKey' | 'clearSteamAuth';
+  action:
+    | 'fetchLibrary'
+    | 'checkGameOwnership'
+    | 'updateCurrentGame'
+    | 'getCurrentGame'
+    | 'authenticateWithSteam'
+    | 'setSteamApiKey'
+    | 'clearSteamAuth';
   platform?: Platform;
   gameTitle?: string;
   apiKey?: string;

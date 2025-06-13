@@ -4,7 +4,10 @@ export const normalizeGameTitle = (title: string): string => {
   return title.toLowerCase().trim();
 };
 
-export const findGameInLibraries = (gameTitle: string, libraries: Library): { found: boolean; platform: Platform | null; game: Game | null } => {
+export const findGameInLibraries = (
+  gameTitle: string,
+  libraries: Library
+): { found: boolean; platform: Platform | null; game: Game | null } => {
   const normalizedTitle = normalizeGameTitle(gameTitle);
 
   for (const platform of ['steam', 'epic', 'gog'] as Platform[]) {

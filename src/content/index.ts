@@ -81,17 +81,19 @@ function initialize(): void {
   });
 
   // Listen for messages from popup/background asking for current game
-  chrome.runtime.onMessage.addListener((
-    message: { action: string },
-    _: chrome.runtime.MessageSender,
-    sendResponse: (response: { gameTitle: string | null }) => void
-  ) => {
-    if (message.action === 'getCurrentGame') {
-      const gameTitle = extractGameTitle(config);
-      sendResponse({ gameTitle });
-      return true; // Keep the message channel open for async response
+  chrome.runtime.onMessage.addListener(
+    (
+      message: { action: string },
+      _: chrome.runtime.MessageSender,
+      sendResponse: (response: { gameTitle: string | null }) => void
+    ) => {
+      if (message.action === 'getCurrentGame') {
+        const gameTitle = extractGameTitle(config);
+        sendResponse({ gameTitle });
+        return true; // Keep the message channel open for async response
+      }
     }
-  });
+  );
 }
 
 // Check if the current game is owned on any platform

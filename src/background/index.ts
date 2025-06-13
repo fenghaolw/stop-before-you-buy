@@ -1,10 +1,6 @@
 import type { Library, Message, MessageResponse, Platform } from '../types';
 import { findGameInLibraries } from '../utils';
-import {
-  authenticateWithSteam,
-  fetchSteamLibrary,
-  clearSteamAuth,
-} from '../services/steam';
+import { authenticateWithSteam, fetchSteamLibrary, clearSteamAuth } from '../services/steam';
 
 // Initialize storage with default values
 chrome.runtime.onInstalled.addListener(() => {
@@ -65,7 +61,7 @@ chrome.runtime.onMessage.addListener(
             sendResponse({
               success: result.success,
               error: result.error,
-              steamId: result.steamId
+              steamId: result.steamId,
             });
           })
           .catch(error => {

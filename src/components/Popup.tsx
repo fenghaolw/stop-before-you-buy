@@ -38,7 +38,7 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
     // Get current game title from active tab
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'getCurrentGame' }, (response) => {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'getCurrentGame' }, response => {
           if (chrome.runtime.lastError) {
             // Content script not available on this page, that's okay
             console.log('Content script not available on this page');
@@ -65,36 +65,40 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
 
   const handlePlatformConnect = (platform: 'steam' | 'epic' | 'gog'): void => {
     if (platform === 'steam') {
-      const functionUrl = 'https://us-central1-stop-before-you-buy.cloudfunctions.net/steamAuthBridge';
+      const functionUrl =
+        'https://us-central1-stop-before-you-buy.cloudfunctions.net/steamAuthBridge';
       const authUrl = `${functionUrl}/auth/steam`;
       // const statusElement = document.getElementById('status')!;
       // statusElement.textContent = 'Logging in...';
 
-      chrome.identity.launchWebAuthFlow({
-        url: authUrl,
-        interactive: true
-      }, (redirectUrl) => {
-        // This callback function is executed after the flow is complete
+      chrome.identity.launchWebAuthFlow(
+        {
+          url: authUrl,
+          interactive: true,
+        },
+        redirectUrl => {
+          // This callback function is executed after the flow is complete
 
-        if (chrome.runtime.lastError || !redirectUrl) {
-          // statusElement.textContent = 'Login failed. Please try again.';
-          console.error(chrome.runtime.lastError);
-          return;
+          if (chrome.runtime.lastError || !redirectUrl) {
+            // statusElement.textContent = 'Login failed. Please try again.';
+            console.error(chrome.runtime.lastError);
+            return;
+          }
+
+          const url = new URL(redirectUrl);
+          const steamId = url.searchParams.get('steamid');
+          const token = url.searchParams.get('token');
+
+          if (steamId && token) {
+            // Save both the user info and the new auth token
+            chrome.storage.local.set({ steamUser: { id: steamId }, authToken: token }, () => {
+              fetchLibrary(platform);
+            });
+          } else {
+            console.error('Login failed: SteamID not found.');
+          }
         }
-
-        const url = new URL(redirectUrl);
-        const steamId = url.searchParams.get('steamid');
-        const token = url.searchParams.get('token');
-
-        if (steamId && token) {
-          // Save both the user info and the new auth token
-          chrome.storage.local.set({ steamUser: { id: steamId }, authToken: token }, () => {
-            fetchLibrary(platform);
-          });
-        } else {
-          console.error('Login failed: SteamID not found.');
-        }
-      });
+      );
     } else {
       // Keep the old flow for Epic and GOG for now
       const authUrls = {
@@ -135,9 +139,7 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
       <div className="current-game-section">
         <h2>Current Game</h2>
         <div className="current-game">
-          <span className="game-title">
-            {currentGame || 'No game detected on this page'}
-          </span>
+          <span className="game-title">{currentGame || 'No game detected on this page'}</span>
         </div>
       </div>
       {/* )} */}
