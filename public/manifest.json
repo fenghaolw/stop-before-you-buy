@@ -1,37 +1,27 @@
 {
-    "manifest_version": 3,
-    "name": "Stop Before You Buy",
-    "version": "1.0.0",
-    "description": "Chrome extension to prevent duplicate game purchases",
-    "permissions": [
-        "storage",
-        "tabs",
-        "identity"
-    ],
-    "host_permissions": [
-        "*://*.steampowered.com/*",
-        "*://*.epicgames.com/*",
-        "*://*.gog.com/*",
-        "https://steamcommunity.com/*",
-        "https://api.steampowered.com/*"
-    ],
-    "action": {
-        "default_popup": "popup.html"
-    },
-    "background": {
-        "service_worker": "background.js",
-        "type": "module"
-    },
-    "content_scripts": [
-        {
-            "matches": [
-                "*://*.steampowered.com/*",
-                "*://*.epicgames.com/*",
-                "*://*.gog.com/*"
-            ],
-            "js": [
-                "content.js"
-            ]
-        }
-    ]
+  "manifest_version": 3,
+  "name": "Stop Before You Buy",
+  "version": "1.0.0",
+  "description": "Chrome extension to prevent duplicate game purchases",
+  "permissions": ["storage", "tabs", "identity", "cookies"],
+  "host_permissions": [
+    "*://*.steampowered.com/*",
+    "*://*.epicgames.com/*",
+    "*://*.gog.com/*",
+    "https://steamcommunity.com/*",
+    "https://api.steampowered.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.steampowered.com/*", "*://*.epicgames.com/*", "*://*.gog.com/*"],
+      "js": ["content.js"]
+    }
+  ]
 }

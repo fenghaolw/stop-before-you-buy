@@ -35,7 +35,8 @@ export interface Message {
     | 'getCurrentGame'
     | 'authenticateWithSteam'
     | 'setSteamApiKey'
-    | 'clearSteamAuth';
+    | 'clearSteamAuth'
+    | 'connectPlatform';
   platform?: Platform;
   gameTitle?: string;
   apiKey?: string;

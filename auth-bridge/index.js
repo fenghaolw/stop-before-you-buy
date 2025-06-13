@@ -7,9 +7,12 @@ const { Firestore } = require('@google-cloud/firestore');
 const axios = require('axios');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid'); // For generating tokens
-const OAuth2Strategy = require('passport-oauth2');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const chromium = require('@sparticuz/chromium');
 
 const app = express();
+puppeteer.use(StealthPlugin());
 
 const firestore = new Firestore({
   projectId: 'stop-before-you-buy',
@@ -29,26 +32,6 @@ passport.use(
     },
     (identifier, profile, done) => {
       return done(null, profile);
-    }
-  )
-);
-
-passport.use(
-  'epic',
-  new OAuth2Strategy(
-    {
-      authorizationURL: 'https://www.epicgames.com/id/authorize',
-      tokenURL: 'https://api.epicgames.dev/epic/oauth/v1/token',
-      clientID: process.env.EPIC_CLIENT_ID,
-      clientSecret: process.env.EPIC_CLIENT_SECRET,
-      callbackURL: `${functionUrl}/auth/epic/callback`,
-    },
-    // This function is called after successfully getting an access token from Epic
-    (accessToken, refreshToken, profile, done) => {
-      // We will store the tokens for later use.
-      // The 'profile' from this library is often empty, we get the user ID in the next step.
-      // We pass the tokens along to the callback route.
-      return done(null, { accessToken, refreshToken });
     }
   )
 );
@@ -154,80 +137,86 @@ app.get('/steam/games', verifyToken, async (req, res) => {
   }
 });
 
-app.get('/auth/epic', passport.authenticate('epic', { session: false }));
+app.post('/epic/games', async (req, res) => {
+  let browser = null;
+  const { cookies } = req.body;
 
-app.get(
-  '/auth/epic/callback',
-  passport.authenticate('epic', { session: false, failureRedirect: '/' }),
-  async (req, res) => {
-    // req.user now contains { accessToken, refreshToken } from the strategy
-    const { accessToken } = req.user;
-
-    // Now, use the access token to get the user's Epic account ID
-    const userInfoResponse = await axios.get('https://api.epicgames.dev/epic/oauth/v1/userInfo', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const epicAccountId = userInfoResponse.data.account_id;
-
-    // Generate our own application token, just like we did for Steam
-    const appToken = uuidv4();
-
-    // Store the Epic tokens securely, linked to our app token
-    const tokenRef = firestore.collection('api_tokens').doc(appToken);
-    await tokenRef.set({
-      epicAccountId: epicAccountId,
-      epicAccessToken: accessToken, // We need this to fetch games later
-      createdAt: new Date(),
-    });
-
-    const extensionCallbackUrl = `https://${process.env.CHROME_EXTENSION_ID}.chromiumapp.org/`;
-    // Send our app token back to the extension
-    res.redirect(
-      `${extensionCallbackUrl}?epicAccountId=${epicAccountId}&epicAccessToken=${accessToken}`
-    );
+  if (!cookies || !Array.isArray(cookies)) {
+    return res.status(400).json({ error: 'Cookies are missing or invalid.' });
   }
-);
+  console.log(`Starting STEALTH scrape process with ${cookies.length} provided cookies.`);
 
-app.get('/epic/games', verifyToken, async (req, res) => {
-  // Re-using our verifyToken middleware
   try {
-    // The verifyToken middleware looked up our app token and found the user's data
-    // Let's assume we stored `epicAccessToken` when we created the token.
-    // (We need to modify our api_tokens collection to store both steamId and epic tokens)
-
-    // This part requires a small change to how we store tokens, let's assume
-    // the 'api_tokens' doc contains the epicAccessToken.
-    const tokenDoc = await firestore.collection('api_tokens').doc(req.token).get();
-    const epicAccessToken = tokenDoc.data().epicAccessToken;
-    const epicAccountId = tokenDoc.data().epicAccountId;
-
-    if (!epicAccessToken) {
-      return res.status(400).json({ error: 'Epic account not linked.' });
-    }
-
-    const epicApiUrl = `https://api.epicgames.dev/ecommerce/v1/private/accounts/${epicAccountId}/entitlements`;
-
-    const response = await axios.get(epicApiUrl, {
-      headers: { Authorization: `Bearer ${epicAccessToken}` },
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+    );
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
     });
 
-    // The response from Epic is different from Steam's, you'll need to parse it.
-    // This is a simplified example of the parsing logic.
-    const games = response.data.map(entitlement => ({
-      appid: entitlement.offerId,
-      name: entitlement.offerName,
-      // ... other properties
-    }));
+    // 1. Inject the user's cookies into the headless browser instance
+    console.log('Injecting session cookies...');
+    await browser.setCookie(...cookies);
+    console.log('Cookies injected.');
 
+    // 2. Navigate directly to the JSON endpoint
+    const baseUrl = 'https://www.epicgames.com/account/v2/payment/ajaxGetOrderHistory';
+
+    const gameTitles = await fetchAllEpicPages(page);
+    const games = Array.from(gameTitles).map(title => ({ name: title }));
+
+    console.log(`Found ${games.length} unique game titles.`);
     res.status(200).json({ game_count: games.length, games: games });
   } catch (error) {
-    console.error(
-      'Error fetching from Epic API:',
-      error.response ? error.response.data : error.message
-    );
-    res.status(500).json({ error: 'Failed to fetch game library from Epic.' });
+    console.error('Error during cookie-based scrape:', error);
+    res.status(500).json({ error: 'Failed to scrape Epic Games library.' });
+  } finally {
+    if (browser !== null) {
+      await browser.close();
+    }
   }
 });
+
+async function fetchAllEpicPages(page) {
+  const baseUrl = 'https://www.epicgames.com/account/v2/payment/ajaxGetOrderHistory';
+  let allOrders = [];
+  let currentPage = 0;
+  let totalPages = 1;
+
+  while (currentPage < totalPages) {
+    await page.goto(`${baseUrl}?page=${currentPage}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    });
+    const pageContent = await page.evaluate(() => document.body.innerText);
+    const data = JSON.parse(pageContent);
+    if (!data || !data.orders) throw new Error(`Failed to parse JSON on page ${currentPage}`);
+    allOrders = allOrders.concat(data.orders);
+    if (currentPage === 0) {
+      totalPages = Math.ceil(data.total / (data.orders.length || 10));
+    }
+    currentPage++;
+  }
+
+  const gameTitles = new Set();
+  allOrders.forEach(order => {
+    if (order.status === 'COMPLETED' && order.items.length > 0) {
+      order.items.forEach(item => {
+        if (item.namespace) gameTitles.add(item.description);
+      });
+    }
+  });
+  return gameTitles;
+}
 
 // We are now exporting the app to be run by the Functions Framework
 exports.api = app;

@@ -75,6 +75,7 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
   }, []);
 
   const handlePlatformConnect = (platform: 'steam' | 'epic' | 'gog'): void => {
+    console.log('[Popup] handlePlatformConnect called for platform:', platform);
     if (platform === 'steam') {
       const functionUrl = 'https://us-central1-stop-before-you-buy.cloudfunctions.net/api';
       const authUrl = `${functionUrl}/auth/steam`;
@@ -87,7 +88,7 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
         redirectUrl => {
           // This callback function is executed after the flow is complete
           if (chrome.runtime.lastError || !redirectUrl) {
-            console.error(chrome.runtime.lastError);
+            console.error('[Popup] Steam auth error:', chrome.runtime.lastError);
             return;
           }
 
@@ -98,33 +99,37 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
           if (steamId && token) {
             // Save both the user info and the new auth token
             chrome.storage.local.set({ steamUser: { id: steamId }, authToken: token }, () => {
+              console.log('[Popup] Steam auth successful, fetching library');
               fetchLibrary(platform);
             });
           } else {
-            console.error('Login failed: SteamID not found.');
+            console.error('[Popup] Login failed: SteamID not found.');
           }
         }
       );
-    } else {
-      // Keep the old flow for Epic and GOG for now
-      const authUrls = {
-        epic: 'https://www.epicgames.com/id/login',
-        gog: 'https://www.gog.com/account',
-      };
-
-      chrome.tabs.create({ url: authUrls[platform] }, tab => {
-        chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-          if (tabId === tab.id && changeInfo.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-            fetchLibrary(platform);
-          }
-        });
+    } else if (platform === 'epic' || platform === 'gog') {
+      console.log('[Popup] Connecting to platform via background script:', platform);
+      chrome.runtime.sendMessage({ action: 'connectPlatform', platform }, response => {
+        console.log('[Popup] Platform connection response:', response);
+        if (response.success) {
+          console.log('[Popup] Platform connected successfully, refreshing libraries');
+          // Refresh the libraries display
+          chrome.storage.local.get(['libraries'], data => {
+            if (data.libraries) {
+              setLibraries(data.libraries);
+            }
+          });
+        } else {
+          console.error('[Popup] Platform connection failed:', response.error);
+        }
       });
     }
   };
 
   const fetchLibrary = (platform: 'steam' | 'epic' | 'gog'): void => {
+    console.log('[Popup] fetchLibrary called for platform:', platform);
     chrome.runtime.sendMessage({ action: 'fetchLibrary', platform }, response => {
+      console.log('[Popup] Received response from background:', response);
       if (response.success && response.libraries) {
         setLibraries(response.libraries);
       }
@@ -153,15 +158,33 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
       <div className="platform-section">
         <h2>Connect Your Libraries</h2>
         <div className="platform-buttons">
-          <button className="platform-btn" onClick={() => handlePlatformConnect('steam')}>
+          <button
+            className="platform-btn"
+            onClick={() => {
+              console.log('Steam button clicked');
+              handlePlatformConnect('steam');
+            }}
+          >
             <img src="/icons/steam.png" alt="Steam" />
             Connect Steam
           </button>
-          <button className="platform-btn" onClick={() => handlePlatformConnect('epic')}>
+          <button
+            className="platform-btn"
+            onClick={() => {
+              console.log('Epic button clicked');
+              handlePlatformConnect('epic');
+            }}
+          >
             <img src="/icons/epic.png" alt="Epic" />
             Connect Epic
           </button>
-          <button className="platform-btn" onClick={() => handlePlatformConnect('gog')}>
+          <button
+            className="platform-btn"
+            onClick={() => {
+              console.log('GOG button clicked');
+              handlePlatformConnect('gog');
+            }}
+          >
             <img src="/icons/gog.png" alt="GOG" />
             Connect GOG
           </button>
