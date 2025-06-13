@@ -35,6 +35,14 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
       if (syncData.settings) setSettings(syncData.settings);
     });
 
+    // Listen for storage changes
+    const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      if (changes.libraries) {
+        setLibraries(changes.libraries.newValue);
+      }
+    };
+    chrome.storage.local.onChanged.addListener(storageListener);
+
     // Get current game title from active tab
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]?.id) {
@@ -60,7 +68,10 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
     };
 
     chrome.runtime.onMessage.addListener(messageListener);
-    return () => chrome.runtime.onMessage.removeListener(messageListener);
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+      chrome.storage.local.onChanged.removeListener(storageListener);
+    };
   }, []);
 
   const handlePlatformConnect = (platform: 'steam' | 'epic' | 'gog'): void => {
