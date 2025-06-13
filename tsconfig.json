@@ -7,6 +7,9 @@
             "DOM",
             "DOM.Iterable"
         ],
+        "types": [
+            "chrome"
+        ],
         "module": "ESNext",
         "skipLibCheck": true,
         "moduleResolution": "bundler",

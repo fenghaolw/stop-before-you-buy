@@ -1,5 +1,10 @@
 import type { Library, Message, MessageResponse, Platform } from '../types';
 import { findGameInLibraries } from '../utils';
+import {
+  authenticateWithSteam,
+  fetchSteamLibrary,
+  clearSteamAuth,
+} from '../services/steam';
 
 // Initialize storage with default values
 chrome.runtime.onInstalled.addListener(() => {
@@ -53,6 +58,32 @@ chrome.runtime.onMessage.addListener(
             });
         }
         return true;
+
+      case 'authenticateWithSteam':
+        authenticateWithSteam()
+          .then(result => {
+            sendResponse({
+              success: result.success,
+              error: result.error,
+              steamId: result.steamId
+            });
+          })
+          .catch(error => {
+            console.error('Error authenticating with Steam:', error);
+            sendResponse({ success: false, error: error.message });
+          });
+        return true;
+
+      case 'clearSteamAuth':
+        clearSteamAuth()
+          .then(() => {
+            sendResponse({ success: true });
+          })
+          .catch(error => {
+            console.error('Error clearing Steam auth:', error);
+            sendResponse({ success: false, error: error.message });
+          });
+        return true;
     }
   }
 );
@@ -74,25 +105,17 @@ async function fetchLibrary(platform: Platform): Promise<Library> {
     }
 
     // Update storage with new library data
-    const data = await chrome.storage.sync.get('libraries');
+    // Use local storage for large library data to avoid quota limits
+    const data = await chrome.storage.local.get('libraries');
     const libraries = data.libraries || { steam: [], epic: [], gog: [] };
     libraries[platform] = games;
-    await chrome.storage.sync.set({ libraries });
+    await chrome.storage.local.set({ libraries });
 
     return libraries;
   } catch (error) {
     console.error(`Error fetching ${platform} library:`, error);
     throw error;
   }
-}
-
-async function fetchSteamLibrary(): Promise<Library['steam']> {
-  // This would require Steam Web API key and user authentication
-  // For now, return mock data
-  return [
-    { id: '1', title: 'Example Game 1', platform: 'steam' },
-    { id: '2', title: 'Example Game 2', platform: 'steam' },
-  ];
 }
 
 async function fetchEpicLibrary(): Promise<Library['epic']> {
@@ -114,7 +137,7 @@ async function fetchGogLibrary(): Promise<Library['gog']> {
 }
 
 async function checkGameOwnership(gameTitle: string): Promise<boolean> {
-  const data = await chrome.storage.sync.get('libraries');
+  const data = await chrome.storage.local.get('libraries');
   const libraries = data.libraries || { steam: [], epic: [], gog: [] };
   const result = findGameInLibraries(gameTitle, libraries);
   return result.found;

@@ -14,6 +14,7 @@
         "test:ui": "vitest --ui"
     },
     "dependencies": {
+        "dotenv": "^16.5.0",
         "preact": "^10.19.6"
     },
     "devDependencies": {

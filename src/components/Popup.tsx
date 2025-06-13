@@ -27,10 +27,12 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
   const [currentGame, setCurrentGame] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load saved data
-    chrome.storage.sync.get(['libraries', 'settings'], data => {
-      if (data.libraries) setLibraries(data.libraries);
-      if (data.settings) setSettings(data.settings);
+    // Load saved data - use local storage for libraries (large data), sync for settings
+    chrome.storage.local.get(['libraries'], localData => {
+      if (localData.libraries) setLibraries(localData.libraries);
+    });
+    chrome.storage.sync.get(['settings'], syncData => {
+      if (syncData.settings) setSettings(syncData.settings);
     });
 
     // Get current game title from active tab
@@ -62,20 +64,53 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
   }, []);
 
   const handlePlatformConnect = (platform: 'steam' | 'epic' | 'gog'): void => {
-    const authUrls = {
-      steam: 'https://steamcommunity.com/login/home/?goto=',
-      epic: 'https://www.epicgames.com/id/login',
-      gog: 'https://www.gog.com/account',
-    };
+    if (platform === 'steam') {
+      const functionUrl = 'https://us-central1-stop-before-you-buy.cloudfunctions.net/steamAuthBridge';
+      const authUrl = `${functionUrl}/auth/steam`;
+      // const statusElement = document.getElementById('status')!;
+      // statusElement.textContent = 'Logging in...';
 
-    chrome.tabs.create({ url: authUrls[platform] }, tab => {
-      chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-        if (tabId === tab.id && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          fetchLibrary(platform);
+      chrome.identity.launchWebAuthFlow({
+        url: authUrl,
+        interactive: true
+      }, (redirectUrl) => {
+        // This callback function is executed after the flow is complete
+
+        if (chrome.runtime.lastError || !redirectUrl) {
+          // statusElement.textContent = 'Login failed. Please try again.';
+          console.error(chrome.runtime.lastError);
+          return;
+        }
+
+        const url = new URL(redirectUrl);
+        const steamId = url.searchParams.get('steamid');
+        const token = url.searchParams.get('token');
+
+        if (steamId && token) {
+          // Save both the user info and the new auth token
+          chrome.storage.local.set({ steamUser: { id: steamId }, authToken: token }, () => {
+            fetchLibrary(platform);
+          });
+        } else {
+          console.error('Login failed: SteamID not found.');
         }
       });
-    });
+    } else {
+      // Keep the old flow for Epic and GOG for now
+      const authUrls = {
+        epic: 'https://www.epicgames.com/id/login',
+        gog: 'https://www.gog.com/account',
+      };
+
+      chrome.tabs.create({ url: authUrls[platform] }, tab => {
+        chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
+          if (tabId === tab.id && changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+            fetchLibrary(platform);
+          }
+        });
+      });
+    }
   };
 
   const fetchLibrary = (platform: 'steam' | 'epic' | 'gog'): void => {
