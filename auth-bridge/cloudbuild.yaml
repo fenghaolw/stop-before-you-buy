@@ -1,0 +1,25 @@
+# cloudbuild.yaml
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'api' # The name of your service
+      - '--gen2'
+      - '--runtime'
+      - 'nodejs22'
+      - '--source'
+      - '.' # Deploy from the current source code
+      - '--region'
+      - 'us-central1' # The region for your service
+      - '--allow-unauthenticated'
+      - '--trigger-http'
+      # This section maps secrets from Secret Manager to environment variables
+      - '--update-secrets'
+      - |-
+        STEAM_API_KEY=STEAM_API_KEY:latest,
+        CHROME_EXTENSION_ID=CHROME_EXTENSION_ID:latest,
+        FUNCTION_URL=FUNCTION_URL:latest,
+        EPIC_CLIENT_ID=EPIC_CLIENT_ID:latest,
+        EPIC_CLIENT_SECRET=EPIC_CLIENT_SECRET:latest

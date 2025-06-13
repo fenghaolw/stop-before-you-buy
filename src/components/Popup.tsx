@@ -76,11 +76,8 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
 
   const handlePlatformConnect = (platform: 'steam' | 'epic' | 'gog'): void => {
     if (platform === 'steam') {
-      const functionUrl =
-        'https://us-central1-stop-before-you-buy.cloudfunctions.net/steamAuthBridge';
+      const functionUrl = 'https://us-central1-stop-before-you-buy.cloudfunctions.net/api';
       const authUrl = `${functionUrl}/auth/steam`;
-      // const statusElement = document.getElementById('status')!;
-      // statusElement.textContent = 'Logging in...';
 
       chrome.identity.launchWebAuthFlow(
         {
@@ -89,9 +86,7 @@ export const Popup = ({ initialLibraries, initialSettings }: PopupProps) => {
         },
         redirectUrl => {
           // This callback function is executed after the flow is complete
-
           if (chrome.runtime.lastError || !redirectUrl) {
-            // statusElement.textContent = 'Login failed. Please try again.';
             console.error(chrome.runtime.lastError);
             return;
           }

@@ -1,6 +1,6 @@
 /// <reference types="chrome"/>
 
-const functionUrl = 'https://us-central1-stop-before-you-buy.cloudfunctions.net/steamAuthBridge';
+const functionUrl = 'https://us-central1-stop-before-you-buy.cloudfunctions.net/api';
 
 export interface SteamAuthResult {
   steamId: string;
@@ -19,7 +19,7 @@ export interface SteamUser {
  * Fetch user's Steam library using the Web API
  */
 export async function fetchSteamLibrary() {
-  const getGamesUrl = `${functionUrl}/api/games`;
+  const getGamesUrl = `${functionUrl}/steam/games`;
 
   // Get the saved token from storage
   chrome.storage.local.get(['authToken'], async result => {
