@@ -3,7 +3,7 @@
   "name": "Stop Before You Buy",
   "version": "0.1.0",
   "description": "Chrome extension to prevent duplicate game purchases",
-  "permissions": ["storage", "tabs", "contextMenus", "scripting", "sidePanel"],
+  "permissions": ["storage", "tabs", "scripting", "sidePanel"],
   "host_permissions": [
     "*://*.steampowered.com/*",
     "*://*.epicgames.com/*",
@@ -11,8 +11,20 @@
     "https://steamcommunity.com/*",
     "https://api.steampowered.com/*"
   ],
+  "icons": {
+    "16": "icons/icon.jpg",
+    "32": "icons/icon.jpg",
+    "48": "icons/icon.jpg",
+    "128": "icons/icon.jpg"
+  },
   "action": {
-    "default_title": "Stop Before You Buy"
+    "default_title": "Stop Before You Buy",
+    "default_icon": {
+      "16": "icons/icon.jpg",
+      "32": "icons/icon.jpg",
+      "48": "icons/icon.jpg",
+      "128": "icons/icon.jpg"
+    }
   },
   "side_panel": {
     "default_path": "popup.html"

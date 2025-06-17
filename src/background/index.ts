@@ -17,14 +17,6 @@ chrome.runtime.onInstalled.addListener(details => {
       }
     });
   }
-
-  // Create context menu (only once during install/update)
-  chrome.contextMenus.create({
-    id: 'openPopup',
-    title: 'Open Stop Before You Buy',
-    contexts: ['page'],
-    documentUrlPatterns: ['*://*.steampowered.com/*', '*://*.epicgames.com/*', '*://*.gog.com/*'],
-  });
 });
 
 // Listen for tab updates to inject content script if needed
@@ -101,13 +93,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         }
       });
     });
-  }
-});
-
-// Context menu click handler
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'openPopup' && tab?.id) {
-    chrome.sidePanel.open({ tabId: tab.id });
   }
 });
 
