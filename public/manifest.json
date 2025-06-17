@@ -12,18 +12,12 @@
     "https://api.steampowered.com/*"
   ],
   "icons": {
-    "16": "icons/icon.jpg",
-    "32": "icons/icon.jpg",
-    "48": "icons/icon.jpg",
-    "128": "icons/icon.jpg"
+    "128": "icons/icon-128.jpg"
   },
   "action": {
     "default_title": "Stop Before You Buy",
     "default_icon": {
-      "16": "icons/icon.jpg",
-      "32": "icons/icon.jpg",
-      "48": "icons/icon.jpg",
-      "128": "icons/icon.jpg"
+      "128": "icons/icon-128.jpg"
     }
   },
   "side_panel": {

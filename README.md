@@ -2,7 +2,26 @@
 
 A Chrome extension that helps prevent duplicate game purchases by tracking your game libraries across multiple platforms (Steam, Epic Games, GOG) and warning you when you're about to buy a game you already own.
 
-## Installation
+## How to Use
+
+The extension works by checking the games you are Browse on popular online game stores against a local copy of your game library. When it detects that you already own the game, it will display a notification, warning you that you are about to purchase a game you already own.
+
+To build its database, "Stop Before You Buy" relies on a one-time import of a CSV file generated from your GOG Galaxy client. GOG Galaxy is a free application that allows you to connect and manage all your games from different platforms like Steam, Epic Games Store, Ubisoft Connect, and more, all in one place.
+
+To import your game library, follow these steps:
+
+1. Sync Your Game Libraries with GOG Galaxy:
+   - Download and install GOG Galaxy if you haven't already.
+   - Open GOG Galaxy and connect your various gaming platform accounts (e.g., Steam, Epic Games Store, etc.). This will allow GOG Galaxy to create a unified view of all your games.
+2. Export Your Game Library as a CSV File
+   - You will need to use the "GOG-Galaxy-Export-Script" to export your library. You can find this tool on GitHub: https://github.com/AB1908/GOG-Galaxy-Export-Script
+   - Follow the instructions on the GitHub page to download and run the script. This will generate a .csv file containing a list of all your games.
+3. Import Your Library into "Stop Before You Buy"
+   - Install the "Stop Before You Buy" extension from the Chrome Web Store.
+   - Click on the extension's icon in your browser's toolbar.
+   - Select "Import CSV File" and choose the file you exported from GOG Galaxy.
+
+That's it! The extension will now have a local record of your game library and will alert you whenever you are on a store page for a game you already own.
 
 ### Development Setup
 
@@ -30,15 +49,7 @@ A Chrome extension that helps prevent duplicate game purchases by tracking your 
    - Enable "Developer mode" in the top right
    - Click "Load unpacked" and select the `dist` folder
 
-## Usage
-
-### 1. Import Your Game Libraries
-
-1. Click the extension icon in your Chrome toolbar
-2. Click "Import CSV File"
-3. Select a CSV file containing your game library
-
-#### CSV Format
+### CSV Format
 
 The extension expects a tab-separated CSV file with the following columns:
 
@@ -60,27 +71,13 @@ Metro Exodus	Steam, Epic Games Store
 
 Note: The extension automatically detects whether your CSV uses tab or comma separation.
 
-### 2. Browse Game Stores
-
-Once your libraries are imported, simply browse:
-
-- Steam Store (`store.steampowered.com`)
-- Epic Games Store (`store.epicgames.com`)
-- GOG (`gog.com`)
-
-The extension will automatically check if you already own the game and show a warning if you do.
-
-### 3. Manage Your Libraries
-
-- View your imported games in the popup
-- See the total count of games in your libraries
-- Clear all libraries if needed
-
 ## Privacy
 
-- All game library data is stored locally in your browser
-- No data is sent to external servers
-- The extension only reads page content to detect games
+"Stop Before You Buy" is designed with your privacy in mind.
+
+- The extension stores your game library information locally on your own computer.
+- This data is not transmitted, sold, or shared with the developers or any third parties.
+- The extension only communicates with the websites you are Browse to check for game titles and display ownership notifications.
 
 ## TODO - Future Improvements
 
