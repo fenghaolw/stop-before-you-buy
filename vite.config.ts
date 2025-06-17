@@ -11,7 +11,24 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    minify: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2,
+      },
+      mangle: {
+        // Preserve Chrome extension API globals and common web APIs
+        reserved: ['chrome', 'browser', 'webkitURL', 'URL', 'document', 'window', 'location'],
+        // Disable property mangling entirely to preserve Chrome API method names
+        properties: false
+      },
+      format: {
+        comments: false,
+      },
+    },
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'src/popup/popup.tsx'),

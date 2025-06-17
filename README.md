@@ -85,6 +85,7 @@ The extension will automatically check if you already own the game and show a wa
 ## TODO - Future Improvements
 
 ### Multi-Language Support
+
 - **TODO**: Add support for multiple locales and languages
 - **TODO**: Implement language-aware game title matching for non-English titles
 - **TODO**: Support for localized game store pages (Steam in different languages, etc.)
@@ -92,11 +93,14 @@ The extension will automatically check if you already own the game and show a wa
 - **TODO**: Add configuration options for preferred language/locale settings
 
 ### Enhanced Matching
+
 - **TODO**: Improve fuzzy matching algorithms for better accuracy
 - **TODO**: Add support for alternative game titles and translations
 - **TODO**: Handle regional variations in game naming conventions
+- **TODO**: Add support in wishlist page
 
 ### Platform Support
+
 - **TODO**: Add support for additional gaming platforms
 - **TODO**: Improve platform-specific game detection logic
 
