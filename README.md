@@ -1,67 +1,107 @@
 # Stop Before You Buy
 
-A Chrome extension that helps you avoid duplicate game purchases across Steam, Epic Games, and GOG platforms.
-
-## Features
-
-- Connect your game libraries from Steam, Epic Games, and GOG
-- Automatic detection of games you already own
-- Warning notifications when viewing games you already own
-- Purchase confirmation prompts to prevent accidental duplicate purchases
-- Clean and modern user interface
-- Automatic library synchronization
+A Chrome extension that helps prevent duplicate game purchases by tracking your game libraries across multiple platforms (Steam, Epic Games, GOG) and warning you when you're about to buy a game you already own.
 
 ## Installation
 
-1. Clone this repository or download the ZIP file
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked" and select the extension directory
+### Development Setup
+
+1. Clone this repository:
+
+   ```bash
+   git clone <repository-url>
+   cd stop-before-you-buy
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Build the extension:
+
+   ```bash
+   npm run build
+   ```
+
+4. Load the extension in Chrome:
+   - Open Chrome and go to `chrome://extensions/`
+   - Enable "Developer mode" in the top right
+   - Click "Load unpacked" and select the `dist` folder
 
 ## Usage
 
+### 1. Import Your Game Libraries
+
 1. Click the extension icon in your Chrome toolbar
-2. Connect your game libraries by clicking the respective platform buttons
-3. The extension will automatically sync your libraries
-4. When browsing game stores, you'll see warnings if you already own the game on another platform
+2. Click "Import CSV File"
+3. Select a CSV file containing your game library
 
-## Supported Platforms
+#### CSV Format
 
-- Steam Store
-- Epic Games Store
-- GOG.com
+The extension expects a tab-separated CSV file with the following columns:
 
-## Development
+- **title** (required): The name of the game
+- **platformList** (required): The platform(s) where you own the game (Steam, GOG, Epic Games Store, etc.)
 
-### Project Structure
+The `platformList` column can contain multiple platforms separated by commas or tabs.
 
-- `manifest.json` - Extension configuration
-- `popup.html` - Extension popup interface
-- `popup.js` - Popup logic and UI interactions
-- `background.js` - Background service worker for API calls
-- `content.js` - Content script for store page detection
-- `styles.css` - Extension styling
+Example CSV format:
 
-### API Integration
+```csv
+title	platformList
+Cyberpunk 2077	Steam
+The Witcher 3: Wild Hunt	GOG
+Hades	Epic Games Store
+Control	Epic Games Store, Steam
+Metro Exodus	Steam, Epic Games Store
+```
 
-The extension currently uses mock data for demonstration purposes. To implement actual API integration:
+Note: The extension automatically detects whether your CSV uses tab or comma separation.
 
-1. Steam: Requires Steam Web API key and user authentication
-2. Epic Games: Requires Epic Games authentication
-3. GOG: Requires GOG authentication
+### 2. Browse Game Stores
 
-## Contributing
+Once your libraries are imported, simply browse:
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+- Steam Store (`store.steampowered.com`)
+- Epic Games Store (`store.epicgames.com`)
+- GOG (`gog.com`)
 
-## License
+The extension will automatically check if you already own the game and show a warning if you do.
 
-MIT License - feel free to use this project for your own purposes.
+### 3. Manage Your Libraries
 
-## Disclaimer
+- View your imported games in the popup
+- See the total count of games in your libraries
+- Clear all libraries if needed
 
-This extension is not officially affiliated with Steam, Epic Games, or GOG. Use at your own risk. 
+## Privacy
+
+- All game library data is stored locally in your browser
+- No data is sent to external servers
+- The extension only reads page content to detect games
+
+## TODO - Future Improvements
+
+### Multi-Language Support
+- **TODO**: Add support for multiple locales and languages
+- **TODO**: Implement language-aware game title matching for non-English titles
+- **TODO**: Support for localized game store pages (Steam in different languages, etc.)
+- **TODO**: Handle character normalization for different writing systems (Cyrillic, CJK, etc.)
+- **TODO**: Add configuration options for preferred language/locale settings
+
+### Enhanced Matching
+- **TODO**: Improve fuzzy matching algorithms for better accuracy
+- **TODO**: Add support for alternative game titles and translations
+- **TODO**: Handle regional variations in game naming conventions
+
+### Platform Support
+- **TODO**: Add support for additional gaming platforms
+- **TODO**: Improve platform-specific game detection logic
+
+**Current Limitation**: The extension currently only supports English game titles and may not work correctly with games in other languages.
+
+---
+
+**Note**: This extension is not affiliated with Steam, Epic Games, GOG, or any other gaming platform.

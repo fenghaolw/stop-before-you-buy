@@ -1,145 +1,141 @@
-import type { Library, Message, MessageResponse, Platform } from '../types';
-import { findGameInLibraries } from '../utils';
-import { fetchSteamLibrary } from '../services/steam';
-import { fetchEpicLibrary } from '../services/epic';
+// Background service worker for Stop Before You Buy extension
 
-// Initialize storage with default values
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get(['libraries', 'settings'], data => {
-    if (!data.libraries) {
-      chrome.storage.sync.set({
-        libraries: {
-          steam: [],
-          epic: [],
-          gog: [],
-        },
-      });
-    }
-    if (!data.settings) {
-      chrome.storage.sync.set({
-        settings: {
-          enableNotifications: true,
-          autoSync: true,
-        },
-      });
-    }
+interface GameLibrary {
+  title: string;
+  platform: string;
+}
+
+// Listen for extension installation
+chrome.runtime.onInstalled.addListener(details => {
+  if (details.reason === 'install') {
+    console.log('Stop Before You Buy extension installed');
+
+    // Initialize storage with empty libraries if not exists
+    chrome.storage.local.get(['gameLibraries'], result => {
+      if (!result.gameLibraries) {
+        chrome.storage.local.set({ gameLibraries: [] });
+      }
+    });
+  }
+
+  // Create context menu (only once during install/update)
+  chrome.contextMenus.create({
+    id: 'openPopup',
+    title: 'Open Stop Before You Buy',
+    contexts: ['page'],
+    documentUrlPatterns: ['*://*.steampowered.com/*', '*://*.epicgames.com/*', '*://*.gog.com/*'],
   });
 });
 
-// Listen for messages from popup and content scripts
-chrome.runtime.onMessage.addListener(
-  (message: Message, _, sendResponse: (response: MessageResponse) => void) => {
-    console.log('[Background] Received message:', message);
-    switch (message.action) {
-      case 'fetchLibrary':
-        if (message.platform) {
-          console.log('[Background] Fetching library for platform:', message.platform);
-          fetchLibrary(message.platform)
-            .then(library => {
-              console.log('[Background] Library fetch successful:', library);
-              sendResponse({ success: true, libraries: library });
-            })
-            .catch(error => {
-              console.error('[Background] Error fetching library:', error);
-              sendResponse({ success: false, error: error.message });
-            });
-        }
-        return true;
+// Listen for tab updates to inject content script if needed
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    const url = tab.url;
 
-      case 'connectPlatform':
-        if (message.platform && (message.platform === 'epic' || message.platform === 'gog')) {
-          console.log('[Background] Connecting to platform:', message.platform);
-          connectToPlatform(message.platform)
-            .then(() => {
-              sendResponse({ success: true });
-            })
-            .catch(error => {
-              console.error('[Background] Error connecting to platform:', error);
-              sendResponse({ success: false, error: error.message });
-            });
-        }
-        return true;
+    // Check if we're on a supported gaming platform
+    const supportedSites = ['store.steampowered.com', 'store.epicgames.com', 'gog.com'];
 
-      case 'checkGameOwnership':
-        if (message.gameTitle) {
-          checkGameOwnership(message.gameTitle)
-            .then(result => {
-              sendResponse({ success: true, owned: result });
-            })
-            .catch(error => {
-              console.error('Error checking game ownership:', error);
-              sendResponse({ success: false, error: error.message });
-            });
-        }
-        return true;
+    const isSupported = supportedSites.some(site => url.includes(site));
+
+    if (isSupported) {
+      // Ensure content script is injected
+      chrome.scripting
+        .executeScript({
+          target: { tabId },
+          files: ['content.js'],
+        })
+        .catch(() => {
+          // Content script might already be injected, ignore error
+        });
     }
   }
-);
+});
 
-async function fetchLibrary(platform: Platform): Promise<Library> {
-  try {
-    let games = [];
-    switch (platform) {
-      case 'steam':
-        games = await fetchSteamLibrary();
-        break;
-      case 'epic':
-        games = await fetchEpicLibrary();
-        break;
-      // case 'gog':
-      //   games = await fetchGogLibrary();
-      //   break;
-    }
+// Handle messages from content script or popup
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  switch (request.action) {
+    case 'getLibraries':
+      chrome.storage.local.get(['gameLibraries'], result => {
+        sendResponse({ libraries: result.gameLibraries || [] });
+      });
+      return true; // Keep message channel open for async response
 
-    // Update storage with new library data
-    const data = await chrome.storage.local.get('libraries');
-    const libraries = data.libraries || { steam: [], epic: [], gog: [] };
-    libraries[platform] = games;
-    await chrome.storage.local.set({ libraries });
-    return libraries;
-  } catch (error) {
-    console.error(`Error fetching ${platform} library:`, error);
-    throw error;
+    case 'updateLibraries':
+      chrome.storage.local.set({ gameLibraries: request.libraries }, () => {
+        sendResponse({ success: true });
+      });
+      return true;
+
+    case 'clearLibraries':
+      chrome.storage.local.remove(['gameLibraries'], () => {
+        sendResponse({ success: true });
+      });
+      return true;
+
+    default:
+      sendResponse({ error: 'Unknown action' });
   }
-}
+});
 
-async function checkGameOwnership(gameTitle: string): Promise<boolean> {
-  const data = await chrome.storage.local.get('libraries');
-  const libraries = data.libraries || { steam: [], epic: [], gog: [] };
-  const result = findGameInLibraries(gameTitle, libraries);
-  return result.found;
-}
+// Handle storage changes and notify content scripts
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.gameLibraries) {
+    // Notify all tabs about library changes
+    chrome.tabs.query({}, tabs => {
+      tabs.forEach(tab => {
+        if (tab.id && tab.url) {
+          const supportedSites = ['store.steampowered.com', 'store.epicgames.com', 'gog.com'];
 
-async function connectToPlatform(platform: 'epic' | 'gog'): Promise<void> {
-  const authUrls = {
-    epic: 'https://www.epicgames.com/id/login',
-    gog: 'https://www.gog.com/account',
-  };
+          const isSupported = supportedSites.some(site => tab.url!.includes(site));
 
-  return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url: authUrls[platform] }, tab => {
-      console.log('[Background] Created new tab for', platform, ':', tab.id);
-
-      const listener = function (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) {
-        console.log('[Background] Tab updated:', tabId, changeInfo);
-        if (tabId === tab.id && changeInfo.status === 'complete') {
-          console.log('[Background] Tab load complete, removing listener and fetching library');
-          chrome.tabs.onUpdated.removeListener(listener);
-
-          // Fetch the library after login page loads
-          fetchLibrary(platform)
-            .then(() => {
-              console.log('[Background] Library fetched successfully for', platform);
-              resolve();
-            })
-            .catch(error => {
-              console.error('[Background] Error fetching library for', platform, ':', error);
-              reject(error);
-            });
+          if (isSupported) {
+            chrome.tabs
+              .sendMessage(tab.id, {
+                action: 'librariesUpdated',
+                libraries: changes.gameLibraries.newValue || [],
+              })
+              .catch(() => {
+                // Tab might not have content script, ignore error
+              });
+          }
         }
-      };
-
-      chrome.tabs.onUpdated.addListener(listener);
+      });
     });
-  });
-}
+  }
+});
+
+// Context menu click handler
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'openPopup' && tab?.id) {
+    chrome.sidePanel.open({ tabId: tab.id });
+  }
+});
+
+// Action click handler to open side panel
+chrome.action.onClicked.addListener(tab => {
+  if (tab.id) {
+    chrome.sidePanel.open({ tabId: tab.id });
+  }
+});
+
+// Badge text to show library count
+chrome.storage.local.get(['gameLibraries'], result => {
+  const count = result.gameLibraries ? result.gameLibraries.length : 0;
+  if (count > 0) {
+    chrome.action.setBadgeText({ text: count.toString() });
+    chrome.action.setBadgeBackgroundColor({ color: '#1e40af' });
+  }
+});
+
+// Update badge when libraries change
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.gameLibraries) {
+    const count = changes.gameLibraries.newValue ? changes.gameLibraries.newValue.length : 0;
+    if (count > 0) {
+      chrome.action.setBadgeText({ text: count.toString() });
+      chrome.action.setBadgeBackgroundColor({ color: '#1e40af' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  }
+});
